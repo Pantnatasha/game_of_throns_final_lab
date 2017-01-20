@@ -1,0 +1,97 @@
+# This R environment comes with all of CRAN preinstalled, as well as many other helpful packages
+# The environment is defined by the kaggle/rstats docker image: https://github.com/kaggle/docker-rstats
+# For example, here's several helpful packages to load in 
+
+library(ggplot2) # Data visualization
+library(readr) # CSV file I/O, e.g. the read_csv function
+library(dplyr)
+library(reshape2)
+
+# Input data files are available in the "../input/" directory.
+# For example, running this (by clicking run or pressing Shift+Enter) will list the files in the input directory
+
+system("ls ../input")
+
+# Any results you write to the current directory are saved as output.
+
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+
+
+#Lets Analyse battles first
+
+battles <- read.csv("../input/battles.csv", stringsAsFactors=TRUE)
+#battles=tbl_df(battles)
+glimpse(battles)
+#38 obs, 25 variables
+
+attach(battles)
+summary(battles)
+#Now study some interesting summaries
+#name=as.character(name)
+
+glimpse(battles)
+
+#No. of battles-Yearwise
+
+table(year)
+ggplot(battles) + geom_bar(aes(x=year, fill=attacker_king))
+
+#Frequent Attackers
+battles %>%
+  group_by(attacker_king) %>%
+  summarise(NbrAttacks=n()) %>%
+  arrange(desc(NbrAttacks))
+
+ggplot(battles) + geom_bar(aes(x=attacker_king),fill="blue") +xlab("Kings") +ylab("No. of battles") 
+
+
+#Biggest War
+bt <- battles %>%
+  filter(!is.na(attacker_size) & !is.na(defender_size)) %>%
+  select(name,attacker_size,defender_size)
+
+mbt <-melt(bt,id.vars = "name")
+
+#Proportional Sizes
+ggplot(mbt) + geom_bar(aes(x=name, y = value, fill=variable), position="fill", stat="identity") + xlab("Battle") + ylab("Proportions") + coord_flip()
+
+#Absolute Sizes
+ggplot(mbt) + geom_bar(aes(x=name, y = value, fill=variable), stat="identity") + xlab("Battle") + ylab("Army Size") + coord_flip() 
+
+#King's with largest attacker sizes
+battles %>%
+  
+  select(attacker_king,attacker_size) %>%
+  group_by(attacker_king) %>%
+  arrange(attacker_size)
+
+#Most wars between kings
+bt<-battles %>%
+  filter(!is.na(attacker_king) & !is.na(defender_king)  & (as.character(attacker_king) != as.character(defender_king))) %>%
+  select(attacker_king,defender_king) %>%
+  group_by(attacker_king,defender_king) %>%
+  summarize(wars=n()) %>%
+  arrange(desc(wars))
+bt
+ggplot(bt, aes(x=attacker_king, y = defender_king )) + geom_raster(aes(fill=wars)) +xlab("Attacking King") +ylab("Defending King") + scale_fill_gradientn(colours=c("#0000FFFF","#FFFFFFFF","#FF0000FF"))
+
+#Most wars between houses
+bt<- battles %>%
+  filter(!is.na(attacker_1) & !is.na(defender_1)) %>%
+  select(attacker_1,defender_1) %>%
+  group_by(attacker_1,defender_1) %>%
+  summarize(wars=n())
+ggplot(bt, aes(x=attacker_1, y = defender_1 )) + geom_raster(aes(fill=wars)) +xlab("Attacking House") + ylab("Defending House") +scale_fill_gradientn(colours=c("#0000FFFF","#FFFFFFFF","#FF0000FF"))
+
+
+
+#Favorite battle techniques
+bt<-battles %>%
+  select(attacker_king,battle_type)
+#%>%
+#  group_by(attacker_king) %>%
+#  tally() 
+
+ggplot(bt) + geom_bar(aes(x=attacker_king ,fill= battle_type))
